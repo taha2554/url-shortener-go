@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shorten a link</title>
+  <style>
+    :root { color-scheme: light dark; --accent: #2f6fed; }
+    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 4rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.6rem; }
+    form { display: grid; gap: .6rem; }
+    input, select, button { font: inherit; padding: .6rem .75rem; border-radius: 8px; border: 1px solid #8884; }
+    button { background: var(--accent); color: #fff; border: 0; cursor: pointer; }
+    .row { display: flex; gap: .5rem; }
+    .row > * { flex: 1; min-width: 0; }
+    #result { margin-top: 1.25rem; padding: 1rem; border-radius: 8px; background: #8881; display: none; }
+    #result.error { color: #c0392b; }
+    code { word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h1>Shorten a link</h1>
+  <form id="form">
+    <input name="url" placeholder="https://example.com/a/very/long/link" required aria-label="URL">
+    <div class="row">
+      <input name="alias" placeholder="custom alias (optional)" aria-label="Alias">
+      <select name="expires_in" aria-label="Expiry">
+        <option value="">never expires</option>
+        <option value="1h">1 hour</option>
+        <option value="24h">1 day</option>
+        <option value="168h">1 week</option>
+      </select>
+    </div>
+    <button>Shorten</button>
+  </form>
+  <div id="result" role="status"></div>
+
+  <script>
+    const form = document.getElementById("form");
+    const result = document.getElementById("result");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const body = Object.fromEntries(new FormData(form));
+      Object.keys(body).forEach((k) => body[k] || delete body[k]);
+      const res = await fetch("/api/links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      result.style.display = "block";
+      result.className = res.ok ? "" : "error";
+      result.innerHTML = "";
+      if (!res.ok) { result.textContent = data.error; return; }
+      const link = document.createElement("a");
+      link.href = link.textContent = data.short_url;
+      const copy = document.createElement("button");
+      copy.textContent = "Copy";
+      copy.style.marginLeft = ".75rem";
+      copy.onclick = () => navigator.clipboard.writeText(data.short_url).then(() => (copy.textContent = "Copied"));
+      result.append(link, copy);
+    });
+  </script>
+</body>
+</html>
